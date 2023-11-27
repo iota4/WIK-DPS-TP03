@@ -1,0 +1,51 @@
+# Version de l'API Docker Compose à utiliser pour lire ce fichier
+version: '3.8'
+services:
+  my_app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    expose:
+      - '8080'
+    environment:
+      - HOSTNAME=${HOSTNAME}
+    deploy:
+      replicas: 4 # Ici on déploie 4 fois le container au sein du service my_app
+    restart: always
+    environment:
+      - PORT=8080
+    networks:
+      - front-network
+    volumes:
+      - db_data:/app/bdd.db
+  proxy:
+    image: nginx:latest
+    # Monter un fichier du répertoire courant de l'hôte
+    # sur le service
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+    # Configurer le port-forwarding entre l'hôte et le service
+    ports:
+      - 8081:80
+
+    # Définir une relation de dépendance
+    # Si my_app n'est pas prêt alors pas de proxy
+    depends_on:
+      - my_app
+
+    # Configure le réseau du service
+    # Il est accessible seulement via le réseau nommé
+    # front-network
+    networks:
+      - front-network
+
+# Déclaration des réseaux
+networks:
+  # Un network nommé front-network qui utilise le driver bridge
+  front-network:
+    driver: bridge
+
+# Déclaration des volumes nommés
+volumes:
+  db_data:
